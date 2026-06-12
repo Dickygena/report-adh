@@ -15,14 +15,14 @@
 <script>
 const AUTH_USERS = [
   // ── ADMIN (max 5) ──────────────────────────────────────
-  { username: 'admin1',   password: 'Admin@1234',  role: 'admin'  },
-  { username: 'admin2',   password: 'Admin@5678',  role: 'admin'  },
+  { username: 'admin',   password: 'Admin@1234',  role: 'admin'  },
+  { username: 'admin2',   password: 'Admin@1234',  role: 'admin'  },
   // { username: 'admin3', password: 'GantiPassword', role: 'admin'  },
   // { username: 'admin4', password: 'GantiPassword', role: 'admin'  },
   // { username: 'admin5', password: 'GantiPassword', role: 'admin'  },
   // ── VIEWER (tidak terbatas) ────────────────────────────
-  { username: 'viewer',   password: 'Viewer@2024', role: 'viewer' },
-  { username: 'viewer2',  password: 'Viewer@2025', role: 'viewer' },
+  { username: 'viewer',   password: 'Viewer@1234', role: 'viewer' },
+  { username: 'viewer2',  password: 'Viewer@1234', role: 'viewer' },
 ];
 const AUTH_LOCK_ATTEMPTS = 3;   // salah berapa kali sebelum dikunci
 const AUTH_LOCK_DURATION = 300; // kunci berapa detik (300 = 5 menit)
