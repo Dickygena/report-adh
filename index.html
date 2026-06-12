@@ -1393,7 +1393,7 @@ tbody tr.spk-cancel-row:hover { filter: brightness(1.15); }
       <input id="viewerJsonUrl" type="text" placeholder="https://raw.githubusercontent.com/username/repo/main/data.json" style="flex:1;min-width:260px;background:var(--surface2);border:1px solid rgba(129,140,248,0.3);border-radius:6px;padding:8px 12px;color:var(--text);font-size:12px;font-family:Inter,sans-serif;outline:none">
       <button onclick="viewerLoadJSON()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(129,140,248,0.15);border:1px solid rgba(129,140,248,0.4);color:#818cf8;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">▶ Load Data</button>
     </div>
-    <div id="viewerLoadStatus" style="margin-top:8px;font-size:11px;color:var(--text-muted)"></div>
+    <div id="viewerLoadStatusUpload" style="margin-top:8px;font-size:11px;color:var(--text-muted)"></div>
     <div style="margin-top:6px;font-size:10px;color:var(--text-dim)">💡 Minta URL <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">data.json</code> dari Admin. Format: <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">https://raw.githubusercontent.com/...</code></div>
   </div>
 
@@ -2587,6 +2587,19 @@ tbody tr.spk-cancel-row:hover { filter: brightness(1.15); }
 <!-- ═══════════════════════════════════════════════════ -->
 <div id="page-monitoring" class="report-page">
 <div class="main">
+
+  <!-- ── Panel Import Viewer (muncul otomatis untuk role viewer) ── -->
+  <div id="viewerImportPanelMon" style="display:none;margin-bottom:16px;padding:16px;background:rgba(129,140,248,0.05);border:1px solid rgba(129,140,248,0.2);border-radius:8px">
+    <div style="font-size:13px;font-weight:600;color:#818cf8;margin-bottom:8px">📥 Load Data dari Admin</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Masukkan URL <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">data.json</code> yang sudah di-upload Admin ke GitHub.</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="viewerJsonUrl" type="text" placeholder="https://raw.githubusercontent.com/username/repo/main/data.json"
+        style="flex:1;min-width:260px;background:var(--surface2);border:1px solid rgba(129,140,248,0.3);border-radius:6px;padding:8px 12px;color:var(--text);font-size:12px;font-family:Inter,sans-serif;outline:none">
+      <button onclick="viewerLoadJSON()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(129,140,248,0.15);border:1px solid rgba(129,140,248,0.4);color:#818cf8;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">▶ Load Data</button>
+    </div>
+    <div id="viewerLoadStatus" style="margin-top:8px;font-size:11px;color:var(--text-muted)"></div>
+    <div style="margin-top:6px;font-size:10px;color:var(--text-dim)">💡 Minta URL dari Admin. Format: <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">https://raw.githubusercontent.com/...</code></div>
+  </div>
 
   <div class="dash-notice" style="border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.05);color:#60a5fa">
     📡 <strong>Monitoring</strong> — Ringkasan status dan total data dari semua tab yang telah di-upload dan diproses. Data diperbarui otomatis setiap kali tab Monitoring dibuka.
@@ -12713,14 +12726,17 @@ function syncExportImportPanels() {
   try {
     var session = JSON.parse(sessionStorage.getItem('adh_auth_session') || 'null');
     if (!session) return;
-    var adminPanel  = document.getElementById('adminExportPanel');
-    var viewerPanel = document.getElementById('viewerImportPanel');
+    var adminPanel   = document.getElementById('adminExportPanel');
+    var viewerPanel  = document.getElementById('viewerImportPanel');     // di upload page (backup)
+    var viewerPanelM = document.getElementById('viewerImportPanelMon'); // di monitoring page
     if (session.role === 'admin') {
-      if (adminPanel)  adminPanel.style.display  = 'block';
-      if (viewerPanel) viewerPanel.style.display = 'none';
+      if (adminPanel)   adminPanel.style.display   = 'block';
+      if (viewerPanel)  viewerPanel.style.display  = 'none';
+      if (viewerPanelM) viewerPanelM.style.display = 'none';
     } else {
-      if (adminPanel)  adminPanel.style.display  = 'none';
-      if (viewerPanel) viewerPanel.style.display = 'block';
+      if (adminPanel)   adminPanel.style.display   = 'none';
+      if (viewerPanel)  viewerPanel.style.display  = 'none';
+      if (viewerPanelM) viewerPanelM.style.display = 'block';
     }
   } catch(e) {}
 }
@@ -12777,8 +12793,9 @@ window.exportDataJSON = function() {
 };
 
 window.viewerLoadJSON = function() {
-  var url    = (document.getElementById('viewerJsonUrl').value || '').trim();
-  var statEl = document.getElementById('viewerLoadStatus');
+  var urlEl  = document.getElementById('viewerJsonUrl');
+  var url    = (urlEl ? urlEl.value : '').trim();
+  var statEl = document.getElementById('viewerLoadStatus') || document.getElementById('viewerLoadStatusUpload');
   if (!url) { statEl.textContent = 'Masukkan URL dulu.'; return; }
   statEl.textContent = 'Mengambil data...';
   var fetchUrl = url
@@ -12853,13 +12870,13 @@ document.addEventListener('DOMContentLoaded', function() {
       var savedUrl = sessionStorage.getItem('adh_viewer_json_url');
       if (!savedUrl) return;
       var input = document.getElementById('viewerJsonUrl');
-      var statEl = document.getElementById('viewerLoadStatus');
+      var statEl = document.getElementById('viewerLoadStatus') || document.getElementById('viewerLoadStatusUpload');
       if (input) input.value = savedUrl;
       if (statEl) statEl.textContent = 'Auto-load data...';
       fetch(savedUrl)
         .then(function(r) { return r.ok ? r.json() : Promise.reject('HTTP ' + r.status); })
-        .then(function(d) { if (d._meta) applyImportedData(d, statEl); })
-        .catch(function() { if (statEl) statEl.textContent = 'Auto-load gagal. Klik Load Data untuk coba lagi.'; });
+        .then(function(d) { if (d._meta) applyImportedData(d, statEl); else throw new Error('Format tidak valid'); })
+        .catch(function(e) { if (statEl) statEl.textContent = 'Auto-load gagal: ' + e + '. Klik Load Data untuk coba lagi.'; });
     } catch(e) {}
   }, 1000);
 });
