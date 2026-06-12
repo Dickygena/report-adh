@@ -16,13 +16,13 @@
 const AUTH_USERS = [
   // ── ADMIN (max 5) ──────────────────────────────────────
   { username: 'admin1',   password: 'Admin@1234',  role: 'admin'  },
-  { username: 'admin2',   password: 'Admin@1234',  role: 'admin'  },
+  { username: 'admin2',   password: 'Admin@5678',  role: 'admin'  },
   // { username: 'admin3', password: 'GantiPassword', role: 'admin'  },
   // { username: 'admin4', password: 'GantiPassword', role: 'admin'  },
   // { username: 'admin5', password: 'GantiPassword', role: 'admin'  },
   // ── VIEWER (tidak terbatas) ────────────────────────────
-  { username: 'viewer',   password: 'Viewer@1234', role: 'viewer' },
-  { username: 'viewer2',  password: 'Viewer@1234', role: 'viewer' },
+  { username: 'viewer',   password: 'Viewer@2024', role: 'viewer' },
+  { username: 'viewer2',  password: 'Viewer@2025', role: 'viewer' },
 ];
 const AUTH_LOCK_ATTEMPTS = 3;   // salah berapa kali sebelum dikunci
 const AUTH_LOCK_DURATION = 300; // kunci berapa detik (300 = 5 menit)
@@ -1373,7 +1373,7 @@ tbody tr.spk-cancel-row:hover { filter: brightness(1.15); }
   <!-- Status setelah proses selesai -->
   <div id="uploadDoneInfo" style="display:none;margin-top:16px;padding:16px;background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.2);border-radius:8px">
     <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:10px">✓ Data berhasil diproses — pilih laporan dari menu di atas</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       <button class="btn" onclick="switchReport('ar-unit')" style="font-size:11px;padding:6px 12px">📋 AR Unit</button>
       <button class="btn" onclick="switchReport('ar-refund')" style="font-size:11px;padding:6px 12px">🔄 AR Refund</button>
       <button class="btn" onclick="switchReport('ar-subsidi')" style="font-size:11px;padding:6px 12px">💰 AR Subsidi DP</button>
@@ -1383,6 +1383,25 @@ tbody tr.spk-cancel-row:hover { filter: brightness(1.15); }
       <button class="btn" onclick="switchReport('spk-outstanding')" style="font-size:11px;padding:6px 12px">📌 SPK Outstanding</button>
       <button class="btn" onclick="switchReport('spk-borrow')" style="font-size:11px;padding:6px 12px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.3);color:#38bdf8">🔁 SPK Borrow</button>
     </div>
+    <div id="adminExportPanel" style="display:none;border-top:1px solid rgba(0,212,170,0.2);padding-top:12px">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">📤 <strong style="color:var(--text)">Share ke Viewer</strong> — Export data hasil proses, lalu upload ke GitHub agar Viewer bisa melihat.</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button onclick="exportDataJSON()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,212,170,0.12);border:1px solid rgba(0,212,170,0.4);color:var(--accent);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">⬇ Download data.json</button>
+        <span id="exportStatus" style="font-size:11px;color:var(--text-muted)"></span>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:var(--text-dim);line-height:1.6">Setelah download → buka GitHub repo → drag-drop <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">data.json</code> → Commit changes → Viewer reload app.</div>
+    </div>
+  </div>
+
+  <div id="viewerImportPanel" style="display:none;margin-top:16px;padding:16px;background:rgba(129,140,248,0.05);border:1px solid rgba(129,140,248,0.2);border-radius:8px">
+    <div style="font-size:13px;font-weight:600;color:#818cf8;margin-bottom:8px">📥 Load Data dari Admin</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Admin sudah export <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">data.json</code> ke GitHub? Masukkan URL file-nya di bawah.</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="viewerJsonUrl" type="text" placeholder="https://raw.githubusercontent.com/username/repo/main/data.json" style="flex:1;min-width:260px;background:var(--surface2);border:1px solid rgba(129,140,248,0.3);border-radius:6px;padding:8px 12px;color:var(--text);font-size:12px;font-family:Inter,sans-serif;outline:none">
+      <button onclick="viewerLoadJSON()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(129,140,248,0.15);border:1px solid rgba(129,140,248,0.4);color:#818cf8;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">▶ Load Data</button>
+    </div>
+    <div id="viewerLoadStatus" style="margin-top:8px;font-size:11px;color:var(--text-muted)"></div>
+    <div style="margin-top:6px;font-size:10px;color:var(--text-dim)">💡 Minta URL <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">data.json</code> dari Admin. Format: <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">https://raw.githubusercontent.com/...</code></div>
   </div>
 
 </div>
@@ -12633,6 +12652,7 @@ function dpOnSearch() { dpApplyFilter(); }
       errorEl.className = 'auth-error';
       lockEl.className  = 'auth-lock';
       applyRole(found.role, found.username);
+      setTimeout(function(){ if(typeof syncExportImportPanels==='function') syncExportImportPanels(); }, 300);
     } else {
       // Fail — increment attempts
       const attempts = (lock && lock.attempts ? lock.attempts : 0) + 1;
@@ -12677,6 +12697,7 @@ function dpOnSearch() { dpApplyFilter(); }
     if (session && session.username && session.role) {
       document.getElementById('authOverlay').classList.add('hidden');
       applyRole(session.role, session.username);
+      setTimeout(function(){ if(typeof syncExportImportPanels==='function') syncExportImportPanels(); }, 300);
     } else {
       // Check if locked
       const lock = getLock();
@@ -12687,6 +12708,168 @@ function dpOnSearch() { dpApplyFilter(); }
   });
 
 })();
+</script>
+
+<!-- ══ EXPORT / IMPORT DATA JSON ════════════════════════════ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(syncExportImportPanels, 600);
+});
+
+function syncExportImportPanels() {
+  try {
+    var session = JSON.parse(sessionStorage.getItem('adh_auth_session') || 'null');
+    if (!session) return;
+    var adminPanel  = document.getElementById('adminExportPanel');
+    var viewerPanel = document.getElementById('viewerImportPanel');
+    if (session.role === 'admin') {
+      if (adminPanel)  adminPanel.style.display  = 'block';
+      if (viewerPanel) viewerPanel.style.display = 'none';
+    } else {
+      if (adminPanel)  adminPanel.style.display  = 'none';
+      if (viewerPanel) viewerPanel.style.display = 'block';
+    }
+  } catch(e) {}
+}
+
+window.exportDataJSON = function() {
+  var statusEl = document.getElementById('exportStatus');
+  if (statusEl) statusEl.textContent = 'Mengumpulkan data...';
+  try {
+    function sanitizeArr(arr) {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(function(row) {
+        if (!row || typeof row !== 'object') return row;
+        var out = {};
+        Object.keys(row).forEach(function(k) {
+          var v = row[k];
+          out[k] = (v instanceof Date) ? { __date: v.toISOString() } : v;
+        });
+        return out;
+      });
+    }
+    var uname = 'admin';
+    try { uname = JSON.parse(sessionStorage.getItem('adh_auth_session')||'{}').username || 'admin'; } catch(e2) {}
+    var payload = {
+      _meta: { exportedAt: new Date().toISOString(), exportedBy: uname, version: 1 },
+      arUnit:         sanitizeArr(window.arUnit         || []),
+      arRefund:       sanitizeArr(window.arRefund        || []),
+      arSubsidi:      sanitizeArr(window.arSubsidi       || []),
+      arSk1000:       sanitizeArr(window.arSk1000        || []),
+      mergedData:     sanitizeArr(window.mergedData      || []),
+      batalData:      sanitizeArr(window.batalData        || []),
+      dashData:       sanitizeArr(window.dashData         || []),
+      dashCancelData: sanitizeArr(window.dashCancelData  || []),
+      leasingData:    sanitizeArr(window.leasingData     || []),
+      spkRawData:     sanitizeArr(window.spkRawData      || []),
+      borrowRawData:  sanitizeArr(window.borrowRawData   || []),
+      bengkelRawData: sanitizeArr(window.bengkelRawData  || []),
+      wipRawData:     sanitizeArr(window.wipRawData      || []),
+      wipHeaders:     window.wipHeaders  || [],
+      wipColMap:      window.wipColMap   || [],
+      soUnitRawData:  sanitizeArr(window.soUnitRawData   || [])
+    };
+    var json = JSON.stringify(payload);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = 'data.json'; a.click();
+    URL.revokeObjectURL(url);
+    var kb = (json.length / 1024).toFixed(1);
+    if (statusEl) statusEl.textContent = 'Berhasil download (' + kb + ' KB)';
+    setTimeout(function() { if (statusEl) statusEl.textContent = ''; }, 4000);
+  } catch(err) {
+    if (statusEl) statusEl.textContent = 'Error: ' + err.message;
+  }
+};
+
+window.viewerLoadJSON = function() {
+  var url    = (document.getElementById('viewerJsonUrl').value || '').trim();
+  var statEl = document.getElementById('viewerLoadStatus');
+  if (!url) { statEl.textContent = 'Masukkan URL dulu.'; return; }
+  statEl.textContent = 'Mengambil data...';
+  var fetchUrl = url
+    .replace('github.com', 'raw.githubusercontent.com')
+    .replace('/blob/', '/');
+  fetch(fetchUrl)
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      if (!data._meta) throw new Error('Format file tidak valid');
+      applyImportedData(data, statEl);
+      sessionStorage.setItem('adh_viewer_json_url', fetchUrl);
+    })
+    .catch(function(err) {
+      statEl.innerHTML = 'Gagal: ' + err.message + ' — Pastikan URL benar dan file sudah di-commit ke GitHub.';
+    });
+};
+
+function restoreDates(arr) {
+  if (!Array.isArray(arr)) return arr;
+  return arr.map(function(row) {
+    if (!row || typeof row !== 'object') return row;
+    var out = {};
+    Object.keys(row).forEach(function(k) {
+      var v = row[k];
+      out[k] = (v && typeof v === 'object' && v.__date) ? new Date(v.__date) : v;
+    });
+    return out;
+  });
+}
+
+function applyImportedData(data, statEl) {
+  window.arUnit         = restoreDates(data.arUnit         || []);
+  window.arRefund       = restoreDates(data.arRefund        || []);
+  window.arSubsidi      = restoreDates(data.arSubsidi       || []);
+  window.arSk1000       = restoreDates(data.arSk1000        || []);
+  window.mergedData     = restoreDates(data.mergedData      || []);
+  window.batalData      = restoreDates(data.batalData        || []);
+  window.dashData       = restoreDates(data.dashData         || []);
+  window.dashCancelData = restoreDates(data.dashCancelData  || []);
+  window.leasingData    = restoreDates(data.leasingData     || []);
+  window.spkRawData     = restoreDates(data.spkRawData      || []);
+  window.borrowRawData  = restoreDates(data.borrowRawData   || []);
+  window.bengkelRawData = restoreDates(data.bengkelRawData  || []);
+  window.wipRawData     = restoreDates(data.wipRawData      || []);
+  window.wipHeaders     = data.wipHeaders  || [];
+  window.wipColMap      = data.wipColMap   || [];
+  window.soUnitRawData  = restoreDates(data.soUnitRawData   || []);
+
+  var fns = ['renderAllAR','renderBatalDO','renderDashboard','renderLeasing',
+             'renderSpkMasterList','renderBorrowTable','renderBengkel',
+             'renderWip','renderSoUnit','renderSoStnk','renderWouAksesoris'];
+  fns.forEach(function(fn) {
+    try { if (typeof window[fn] === 'function') window[fn](); } catch(e) { console.warn(fn, e); }
+  });
+  try { if (typeof window.processArSk1000 === 'function') window.processArSk1000(); } catch(e) {}
+  try { if (typeof window.renderDataPenjualan === 'function') window.renderDataPenjualan(); } catch(e) {}
+
+  var doneInfo = document.getElementById('uploadDoneInfo');
+  if (doneInfo) doneInfo.style.display = 'block';
+
+  var meta = data._meta || {};
+  var exportTime = meta.exportedAt ? new Date(meta.exportedAt).toLocaleString('id-ID') : '-';
+  var total = (window.arUnit||[]).length + (window.spkRawData||[]).length + (window.bengkelRawData||[]).length;
+  statEl.innerHTML = 'Data berhasil dimuat! Export oleh <strong>' + (meta.exportedBy||'admin') + '</strong> pada ' + exportTime + ' (' + total + ' records)';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    try {
+      var session = JSON.parse(sessionStorage.getItem('adh_auth_session') || 'null');
+      if (!session || session.role !== 'viewer') return;
+      var savedUrl = sessionStorage.getItem('adh_viewer_json_url');
+      if (!savedUrl) return;
+      var input = document.getElementById('viewerJsonUrl');
+      var statEl = document.getElementById('viewerLoadStatus');
+      if (input) input.value = savedUrl;
+      if (statEl) statEl.textContent = 'Auto-load data...';
+      fetch(savedUrl)
+        .then(function(r) { return r.ok ? r.json() : Promise.reject('HTTP ' + r.status); })
+        .then(function(d) { if (d._meta) applyImportedData(d, statEl); })
+        .catch(function() { if (statEl) statEl.textContent = 'Auto-load gagal. Klik Load Data untuk coba lagi.'; });
+    } catch(e) {}
+  }, 1000);
+});
 </script>
 </body>
 </html>
